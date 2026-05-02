@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cookie Inspector — Educational Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{width:100%;height:100%;background:#080808;overflow:hidden;}
+  :root{--fg:#e8e8e8;--fg-dim:#777;--fg-faint:#3a3a3a;--bg:#080808;--border:#1e1e1e;--border-hi:#444;--mono:'Share Tech Mono','Courier New',monospace;}
+  #app{font-family:var(--mono);background:var(--bg);color:var(--fg);display:flex;flex-direction:column;width:100%;height:100vh;}
+  .titlebar{background:#0a0a0a;border-bottom:1px solid var(--border-hi);padding:6px 14px;display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--fg-dim);letter-spacing:1px;flex-shrink:0;}
+  .titlebar-left{display:flex;align-items:center;gap:10px;}
+  .dots{display:flex;gap:5px;}
+  .dot{width:10px;height:10px;border-radius:50%;background:#333;}
+  .status-row{display:flex;gap:16px;align-items:center;}
+  .status-item{font-size:9px;color:var(--fg-faint);letter-spacing:1px;}
+  .status-item span{color:var(--fg-dim);}
+  .blink{animation:blink 1s step-end infinite;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+  .ai-tag{font-size:8px;padding:1px 5px;border:1px solid var(--border);color:var(--fg-faint);border-radius:2px;}
+  .tabs{display:flex;border-bottom:1px solid var(--border-hi);background:#0a0a0a;flex-shrink:0;}
+  .tab{padding:8px 16px;font-size:10px;letter-spacing:1px;color:var(--fg-faint);cursor:pointer;border-right:1px solid var(--border);border-bottom:2px solid transparent;transition:all 0.1s;}
+  .tab:hover{color:var(--fg-dim);background:#111;}
+  .tab.active{color:var(--fg);border-bottom:2px solid var(--fg-dim);background:#0f0f0f;}
+  .main{display:flex;flex:1;min-height:0;overflow:hidden;}
+  .sidebar{width:170px;border-right:1px solid var(--border);background:#0a0a0a;flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto;}
+  .sidebar-section{border-bottom:1px solid var(--border);padding:8px;}
+  .sidebar-label{font-size:8px;color:var(--fg-faint);letter-spacing:2px;margin-bottom:6px;}
+  .sidebar-btn{display:block;width:100%;text-align:left;background:none;border:none;color:var(--fg-dim);font-family:var(--mono);font-size:10px;padding:5px 6px;cursor:pointer;border-radius:2px;letter-spacing:0.5px;}
+  .sidebar-btn:hover{background:#161616;color:var(--fg);}
+  .sidebar-btn.active{background:#1a1a1a;color:#fff;border-left:2px solid var(--fg-dim);}
+  .sidebar-btn .icon{margin-right:6px;font-size:9px;}
+  .content{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;}
+  .input-panel{padding:10px 14px;border-bottom:1px solid var(--border);background:#0a0a0a;flex-shrink:0;}
+  .input-label{font-size:8px;color:var(--fg-faint);letter-spacing:2px;margin-bottom:4px;}
+  .input-row{display:flex;gap:8px;align-items:center;}
+  .target-input{flex:1;background:#060606;border:1px solid var(--border-hi);border-radius:2px;color:var(--fg);font-family:var(--mono);font-size:12px;padding:7px 10px;outline:none;height:34px;min-width:0;}
+  .target-input:focus{border-color:var(--fg-dim);}
+  .target-input::placeholder{color:#2a2a2a;}
+  .btn{background:#111;border:1px solid var(--border-hi);color:var(--fg-dim);font-family:var(--mono);font-size:10px;letter-spacing:1px;padding:7px 12px;cursor:pointer;border-radius:2px;white-space:nowrap;height:34px;flex-shrink:0;}
+  .btn:hover{background:#1a1a1a;color:var(--fg);}
+  .btn:active{transform:scale(0.97);}
+  .btn:disabled{opacity:0.3;cursor:default;}
+  .btn-primary{border-color:#555;color:#ccc;}
+  .btn-primary:hover{border-color:#888;color:#fff;}
+  .options-row{display:flex;gap:12px;align-items:center;padding:5px 14px;border-bottom:1px solid var(--border);background:#090909;flex-shrink:0;flex-wrap:wrap;}
+  .opt-label{font-size:9px;color:var(--fg-faint);letter-spacing:1px;}
+  .opt-select{background:#0a0a0a;border:1px solid var(--border);color:var(--fg-dim);font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:2px;outline:none;cursor:pointer;}
+  .checkbox-wrap{display:flex;align-items:center;gap:5px;cursor:pointer;}
+  .checkbox-wrap input{accent-color:#666;cursor:pointer;}
+  .checkbox-wrap label{font-size:9px;color:var(--fg-faint);letter-spacing:1px;cursor:pointer;}
+  .log-area{padding:8px 14px;flex-shrink:0;height:130px;overflow-y:auto;border-bottom:1px solid var(--border);}
+  .log-line{font-size:10px;line-height:1.9;opacity:0;animation:fadeIn 0.05s forwards;}
+  @keyframes fadeIn{to{opacity:1}}
+  .ts{color:var(--fg-faint);}
+  .ok{color:#aaa;}.warn{color:#888;}.err{color:#ddd;font-weight:bold;}
+  .progress-wrap{padding:4px 14px;display:none;flex-shrink:0;}
+  .progress-label{font-size:8px;color:var(--fg-faint);letter-spacing:2px;margin-bottom:3px;display:flex;justify-content:space-between;}
+  .progress-bar{height:2px;background:#1a1a1a;border-radius:1px;overflow:hidden;}
+  .progress-fill{height:100%;background:var(--fg-dim);width:0%;transition:width 0.08s linear;}
+  .results-area{flex:1;overflow-y:auto;padding:12px 14px;}
+  .result-placeholder{color:var(--fg-faint);font-size:10px;padding:30px 0;text-align:center;letter-spacing:2px;}
+  .section-label{font-size:8px;color:var(--fg-faint);letter-spacing:2px;margin-bottom:7px;border-bottom:1px solid var(--border);padding-bottom:4px;display:flex;justify-content:space-between;}
+  .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:12px;}
+  .field{background:#0a0a0a;border:1px solid var(--border);border-radius:2px;padding:6px 10px;cursor:pointer;transition:border-color 0.1s;}
+  .field:hover{border-color:var(--border-hi);}
+  .field-key{font-size:8px;color:var(--fg-faint);letter-spacing:1px;margin-bottom:2px;}
+  .field-val{font-size:11px;color:var(--fg);word-break:break-all;}
+  .field-val.hi{color:#fff;}.field-val.dim{color:var(--fg-dim);}.field-val.unknown{color:var(--fg-faint);font-style:italic;}
+  .copy-hint{font-size:8px;color:var(--fg-faint);margin-top:2px;display:none;}
+  .field:hover .copy-hint{display:block;}
+  .table-wrap{overflow-x:auto;margin-bottom:10px;}
+  .cookie-table{width:100%;border-collapse:collapse;font-size:10px;}
+  .cookie-table th{color:var(--fg-faint);text-align:left;padding:4px 8px;font-size:8px;letter-spacing:1px;border-bottom:1px solid var(--border-hi);white-space:nowrap;}
+  .cookie-table td{padding:5px 8px;border-bottom:1px solid var(--border);color:var(--fg-dim);vertical-align:middle;}
+  .cookie-table tr{cursor:pointer;}
+  .cookie-table tr:hover td{background:#111;}
+  .cookie-table tr.selected td{background:#141414;color:var(--fg);}
+  .badge{display:inline-block;padding:1px 5px;border-radius:2px;font-size:8px;letter-spacing:1px;border:1px solid var(--border-hi);color:var(--fg-dim);background:#111;}
+  .badge-hi{color:#ddd;border-color:#666;background:#1a1a1a;}
+  .badge-lo{color:var(--fg-faint);border-color:#222;background:#0a0a0a;}
+  .entropy-bar{height:3px;background:#1a1a1a;border-radius:1px;margin-top:3px;width:60px;}
+  .entropy-fill{height:100%;border-radius:1px;background:var(--fg-dim);}
+  .detail-drawer{background:#0a0a0a;border-top:1px solid var(--border);padding:10px 14px;display:none;flex-shrink:0;}
+  .detail-title{font-size:8px;letter-spacing:2px;color:var(--fg-faint);margin-bottom:8px;}
+  .detail-grid{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;}
+  .detail-key{color:var(--fg-faint);font-size:9px;}
+  .detail-val{color:var(--fg);font-size:9px;word-break:break-all;}
+  .bottombar{background:#0a0a0a;border-top:1px solid var(--border);padding:4px 14px;display:flex;justify-content:space-between;align-items:center;font-size:8px;color:var(--fg-faint);letter-spacing:1px;flex-shrink:0;}
+  ::-webkit-scrollbar{width:4px;height:4px;}
+  ::-webkit-scrollbar-track{background:#080808;}
+  ::-webkit-scrollbar-thumb{background:#222;}
+  .prompt-line{color:var(--fg-faint);font-size:10px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="titlebar">
+    <div class="titlebar-left">
+      <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <span style="letter-spacing:2px">COOKIE_INSPECTOR</span>
+      <span class="ai-tag">CLAUDE AI</span>
+    </div>
+    <div class="status-row">
+      <div class="status-item">SESSION <span id="stat-session">IDLE</span></div>
+      <div class="status-item">COOKIES <span id="stat-cookies">0</span></div>
+      <div class="status-item">RISK <span id="stat-risk">—</span></div>
+      <div class="status-item"><span class="blink">▮</span></div>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('scan',this)">[ SCAN ]</div>
+    <div class="tab" onclick="switchTab('cookies',this)">[ COOKIES ]</div>
+    <div class="tab" onclick="switchTab('device',this)">[ DEVICE ]</div>
+    <div class="tab" onclick="switchTab('log',this)">[ LOG ]</div>
+  </div>
+  <div class="main">
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">PRESETS</div>
+        <button class="sidebar-btn" onclick="setPreset('roblox')"><span class="icon">▸</span>Roblox</button>
+        <button class="sidebar-btn" onclick="setPreset('discord')"><span class="icon">▸</span>Discord</button>
+        <button class="sidebar-btn" onclick="setPreset('steam')"><span class="icon">▸</span>Steam</button>
+        <button class="sidebar-btn" onclick="setPreset('instagram')"><span class="icon">▸</span>Instagram</button>
+        <button class="sidebar-btn" onclick="setPreset('spotify')"><span class="icon">▸</span>Spotify</button>
+        <button class="sidebar-btn" onclick="setPreset('minecraft')"><span class="icon">▸</span>Minecraft</button>
+        <button class="sidebar-btn" onclick="setPreset('tiktok')"><span class="icon">▸</span>TikTok</button>
+        <button class="sidebar-btn" onclick="setPreset('netflix')"><span class="icon">▸</span>Netflix</button>
+        <button class="sidebar-btn" onclick="setPreset('youtube')"><span class="icon">▸</span>YouTube</button>
+        <button class="sidebar-btn" onclick="setPreset('twitter')"><span class="icon">▸</span>Twitter/X</button>
+        <button class="sidebar-btn" onclick="setPreset('reddit')"><span class="icon">▸</span>Reddit</button>
+        <button class="sidebar-btn" onclick="setPreset('twitch')"><span class="icon">▸</span>Twitch</button>
+        <button class="sidebar-btn" onclick="setPreset('snapchat')"><span class="icon">▸</span>Snapchat</button>
+        <button class="sidebar-btn" onclick="setPreset('github')"><span class="icon">▸</span>GitHub</button>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">HISTORY</div>
+        <div id="history-list" style="font-size:9px;color:var(--fg-faint);padding:2px;">no scans yet</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="input-panel">
+        <div class="input-label">TARGET</div>
+        <div class="input-row">
+          <input class="target-input" id="target-input" placeholder="name / platform / url / username..." onkeydown="if(event.key==='Enter')runVisualize()">
+          <button class="btn btn-primary" id="vizBtn" onclick="runVisualize()">[ SCAN ]</button>
+          <button class="btn" onclick="clearAll()">[ CLR ]</button>
+        </div>
+      </div>
+      <div class="options-row">
+        <span class="opt-label">MODE</span>
+        <select class="opt-select" id="opt-mode">
+          <option>FULL SCAN</option>
+          <option>COOKIES ONLY</option>
+          <option>IDENTITY ONLY</option>
+        </select>
+        <span class="opt-label">DEPTH</span>
+        <select class="opt-select" id="opt-depth">
+          <option>SHALLOW</option>
+          <option selected>DEEP</option>
+          <option>AGGRESSIVE</option>
+        </select>
+        <div class="checkbox-wrap">
+          <input type="checkbox" id="opt-stealth" checked>
+          <label for="opt-stealth">STEALTH</label>
+        </div>
+        <div class="checkbox-wrap">
+          <input type="checkbox" id="opt-persist">
+          <label for="opt-persist">PERSIST</label>
+        </div>
+      </div>
+      <div class="log-area" id="log-area">
+        <div class="prompt-line">$ ready. enter target and press [ SCAN ]<span class="blink">_</span></div>
+      </div>
+      <div class="progress-wrap" id="progress-wrap">
+        <div class="progress-label"><span id="progress-label-text">SCANNING...</span><span id="progress-pct">0%</span></div>
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      </div>
+      <div class="results-area" id="results-area">
+        <div class="result-placeholder">// NO DATA — RUN A SCAN</div>
+      </div>
+      <div class="detail-drawer" id="detail-drawer">
+        <div class="detail-title">// COOKIE DETAIL — CLICK ROW AGAIN TO CLOSE</div>
+        <div class="detail-grid" id="detail-grid"></div>
+      </div>
+    </div>
+  </div>
+  <div class="bottombar">
+    <span>EDUCATIONAL DEMO &nbsp;|&nbsp; ALL DATA IS FAKE &nbsp;|&nbsp; cookie_inspector v3.1</span>
+    <span id="bottom-status">IDLE</span>
+  </div>
+</div>
+<script>const a0_0x22dc6a=a0_0xbe90;(function(_0x4a1ba8,_0x5eab60){const _0x1fc5c1=a0_0xbe90,_0x26021f=_0x4a1ba8();while(!![]){try{const _0x42e9c8=-parseInt(_0x1fc5c1(0x106))/0x1+-parseInt(_0x1fc5c1(0x18a))/0x2+-parseInt(_0x1fc5c1(0x192))/0x3*(-parseInt(_0x1fc5c1(0xce))/0x4)+-parseInt(_0x1fc5c1(0x188))/0x5*(parseInt(_0x1fc5c1(0xf1))/0x6)+parseInt(_0x1fc5c1(0x149))/0x7+-parseInt(_0x1fc5c1(0xcd))/0x8*(parseInt(_0x1fc5c1(0x16e))/0x9)+parseInt(_0x1fc5c1(0x13f))/0xa*(parseInt(_0x1fc5c1(0xf6))/0xb);if(_0x42e9c8===_0x5eab60)break;else _0x26021f['push'](_0x26021f['shift']());}catch(_0x13e2de){_0x26021f['push'](_0x26021f['shift']());}}}(a0_0x10dc,0xb778a));const a0_0x46ec16=(function(){let _0x1bfe1f=!![];return function(_0x5ee245,_0x5a2b6a){const _0x4b37e0=_0x1bfe1f?function(){const _0x36d675=a0_0xbe90;if(_0x5a2b6a){const _0x191aef=_0x5a2b6a[_0x36d675(0xd5)](_0x5ee245,arguments);return _0x5a2b6a=null,_0x191aef;}}:function(){};return _0x1bfe1f=![],_0x4b37e0;};}()),a0_0x48db21=a0_0x46ec16(this,function(){const _0x30ee80=a0_0xbe90;return a0_0x48db21['toString']()[_0x30ee80(0xd8)](_0x30ee80(0xe4))[_0x30ee80(0x163)]()[_0x30ee80(0x189)](a0_0x48db21)[_0x30ee80(0xd8)]('(((.+)+)+)+$');});a0_0x48db21();function randHex(_0x54c68a){const _0x29137c=a0_0xbe90;return[...Array(_0x54c68a)][_0x29137c(0x121)](()=>_0x29137c(0x144)[Math[_0x29137c(0xda)](Math[_0x29137c(0x17a)]()*0x10)])[_0x29137c(0xea)]('');}function randInt(_0x5b024d,_0x22623e){const _0x58e10b=a0_0xbe90;return Math[_0x58e10b(0xda)](Math[_0x58e10b(0x17a)]()*(_0x22623e-_0x5b024d+0x1))+_0x5b024d;}function delay(_0x136fc6){return new Promise(_0x5c28bb=>setTimeout(_0x5c28bb,_0x136fc6));}let scanHistory=[],lastData=null,activeTab=a0_0x22dc6a(0xdc),selectedCookieIdx=-0x1;function switchTab(_0xc2865d,_0x2830f3){const _0x26453a=a0_0x22dc6a;activeTab=_0xc2865d,document[_0x26453a(0x18f)](_0x26453a(0x179))['forEach'](_0x3599e4=>_0x3599e4[_0x26453a(0xf7)][_0x26453a(0xd6)]('active')),_0x2830f3[_0x26453a(0xf7)]['add'](_0x26453a(0x191));if(!lastData)return;const _0x4b7221=document[_0x26453a(0xe9)](_0x26453a(0x176));if(_0xc2865d===_0x26453a(0xdc))renderIdentity(lastData,_0x4b7221);else{if(_0xc2865d===_0x26453a(0x129))renderCookies(lastData,_0x4b7221);else{if(_0xc2865d===_0x26453a(0x111))renderDevice(lastData,_0x4b7221);else{if(_0xc2865d===_0x26453a(0xd3)){_0x4b7221[_0x26453a(0x112)]='';const _0x478801=document[_0x26453a(0xe9)]('log-area')[_0x26453a(0x150)](!![]);_0x478801[_0x26453a(0x16a)]['height']=_0x26453a(0xdb),_0x478801['style'][_0x26453a(0x158)]=_0x26453a(0x167),_0x478801[_0x26453a(0x16a)][_0x26453a(0x15f)]='none',_0x4b7221[_0x26453a(0xe7)](_0x478801);}}}}}function setPreset(_0x4d0baf){const _0x37270b=a0_0x22dc6a;document['getElementById'](_0x37270b(0x156))[_0x37270b(0xf4)]=_0x4d0baf,document[_0x37270b(0x18f)]('.sidebar-btn')[_0x37270b(0xcf)](_0x467a6b=>_0x467a6b[_0x37270b(0xf7)][_0x37270b(0x132)]('active',_0x467a6b['textContent'][_0x37270b(0x10e)]()[_0x37270b(0x148)]()===_0x4d0baf)),document[_0x37270b(0xe9)](_0x37270b(0x156))[_0x37270b(0x128)]();}function a0_0x10dc(){const _0x5fed5f=['%</span><span\x20class=\x22detail-key\x22>RISK</span><span\x20class=\x22detail-val\x22>','</div><div\x20class=\x22copy-hint\x22>click\x20to\x20copy</div></div><div\x20class=\x22field\x22><div\x20class=\x22field-key\x22>FIRST\x20LOGIN</div><div\x20class=\x22field-val\x20dim\x22>','log','</span>\x20\x20<span\x20class=\x22','apply','remove','session_id','search','</td><td><div\x20style=\x22font-size:9px;color:#666\x22>','floor','auto','scan','badge-hi','warn','progress-fill','Windows\x20NT\x2010.0;\x20Win64;\x20x64','</span><span\x20class=\x22detail-key\x22>VALUE</span><span\x20class=\x22detail-val\x22>','stat-risk','CRITICAL','(((.+)+)+)+$','expires','\x22><td\x20style=\x22color:var(--fg-faint)\x22>','appendChild','2027-01-01','getElementById','join','remember_me','risk','name','padStart','writeText','geo','90MQlqos','progress-wrap','</div></div><div\x20class=\x22field\x22><div\x20class=\x22field-key\x22>OS</div><div\x20class=\x22field-val\x20dim\x22\x20style=\x22font-size:9px\x22>','value','COMPLETE','27781666ZoJBBI','classList','bad\x20schema','%</div><div\x20class=\x22entropy-bar\x22><div\x20class=\x22entropy-fill\x22\x20style=\x22width:','parse','LOW','unshift','POST','entropy','SCANNING','type','</div><div\x20class=\x22copy-hint\x22>click\x20to\x20copy</div></div>','[*]\x20generating\x20session\x20artifacts','<span\x20class=\x22unknown\x22>unknown</span>','[\x20SCAN\x20]','user','1423497TSOakT','disabled','</div></div><div\x20class=\x22field\x22><div\x20class=\x22field-key\x22>LAST\x20ACTIVE</div><div\x20class=\x22field-val\x22>','$\x20./scan\x20--target\x20\x22','isp','<div\x20class=\x22section-label\x22><span>NETWORK\x20/\x20DEVICE</span></div><div\x20class=\x22field-grid\x22><div\x20class=\x22field\x22\x20onclick=\x22copyField(\x27','replace','\x27)\x22><div\x20class=\x22field-key\x22>DOMAIN</div><div\x20class=\x22field-val\x22>','trim','<div\x20class=\x22prompt-line\x22>$\x20cleared.<span\x20class=\x22blink\x22>_</span></div>','session','device','innerHTML','HIGH','className','IDLE','<span\x20class=\x22detail-key\x22>NAME</span><span\x20class=\x22detail-val\x22>','json','<div\x20class=\x22section-label\x22><span>COOKIE\x20JAR','unknown.com','.sidebar-btn','<div\x20class=\x22field-val\x20hi\x22>','_ga','GA1.2.','\x27)\x22><div\x20class=\x22field-key\x22>EMAIL</div><div\x20class=\x22field-val\x20hi\x22>','https://api.anthropic.com/v1/messages','user_id','map','platform','detail-grid','width','domain','firstLogin','</div></div><div\x20class=\x22field\x22><div\x20class=\x22field-key\x22>ISP</div><div\x20class=\x22field-val\x20dim\x22>','focus','cookies','stringify','scrollHeight','mac','MEDIUM','You\x20parse\x20input\x20for\x20a\x20fictional\x20hacking\x20demo\x20UI.\x20Input:\x20\x22','err','bottom-status','en-GB','toggle','[+]\x20done\x20—\x20','2025-04-28\x2019:11:44','</div></div><div\x20class=\x22field\x22><div\x20class=\x22field-key\x22>USER-AGENT</div><div\x20class=\x22field-val\x20dim\x22\x20style=\x22font-size:9px\x22>','secure','</div></div></div>','<tr\x20onclick=\x22selectCookie(','opt-mode','[+]\x20mapping\x20to\x20output\x20schema...','toUpperCase','</span>','\x27)\x22><div\x20class=\x22field-key\x22>USER\x20ID</div><div\x20class=\x22field-val\x22>#','selected','10aKUJrY','\x22\x20--mode\x20','createElement','email','</td><td>','0123456789abcdef','length','</td><td\x20style=\x22max-width:120px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis\x22\x20title=\x22','</td><td\x20style=\x22color:#ccc;white-space:nowrap\x22>','toLowerCase','7831600AouryE','filter','stat-cookies','[!!!]\x20auth\x20cookie\x20exposed\x20—\x20capturing','INITIALIZING','2025-12-01','scrollTop','cloneNode','block','</span><span>','progress-label-text','input','<div\x20class=\x22result-placeholder\x22>//\x20NO\x20DATA\x20—\x20RUN\x20A\x20SCAN</div>','target-input','slice','borderBottom','status','\x27)\x22>▸\x20','\x20cookies\x20captured','log-line','find','\x27)\x22><div\x20class=\x22field-key\x22>PLATFORM</div><div\x20class=\x22field-val\x20hi\x22>','maxHeight','identity','badge-lo','[!]\x20AI\x20error\x20—\x20fallback\x20loaded','toString','clipboard','</td></tr>','<div\x20class=\x22copy-hint\x22>click\x20to\x20copy</div></div><div\x20class=\x22field\x22\x20onclick=\x22copyField(\x27','none','</div><div\x20class=\x22copy-hint\x22>click\x20to\x20copy</div></div><div\x20class=\x22field\x22\x20onclick=\x22copyField(\x27','%\x22></div></div></td><td>','style','add','<div\x20style=\x22padding:3px\x202px;cursor:pointer;color:var(--fg-faint);font-size:9px\x22\x20onclick=\x22setPreset(\x27','error','27cYTZMo','[*]\x20Claude\x20inference\x20engine\x20online','Telia\x20Finland\x20Oyj','round','<div\x20class=\x22field\x22\x20onclick=\x22copyField(\x27','userAgent','[+]\x20AI\x20parse\x20OK','<span\x20class=\x22ts\x22>','results-area','crow-','message','.tab','random','min','ACTIVE','2026-01-01','[*]\x20resolving\x20platform\x20context','</div>','<div\x20class=\x22field-val\x20unknown\x22>unknown</div>','toLocaleTimeString','\x22\x0aReturn\x20ONLY\x20raw\x20JSON,\x20no\x20markdown,\x20no\x20explanation.\x0aSchema:\x0a{\x22identity\x22:{\x22name\x22:\x22capitalized\x20if\x20person\x20name\x20(john->John,\x20emma->Emma,\x20single\x20first\x20names\x20always\x20count),\x20null\x20otherwise\x22,\x22email\x22:\x22fabricated\x20or\x20null\x22,\x22userId\x22:\x22fake\x207-digit\x20numeric\x20string\x22,\x22domain\x22:\x22real\x20domain\x20for\x20platforms\x20else\x20gmail.com/yahoo.com\x22,\x22firstLogin\x22:\x22YYYY-MM-DD\x20HH:MM:SS\x22,\x22lastActive\x22:\x22YYYY-MM-DD\x20HH:MM:SS\x22},\x22device\x22:{\x22ip\x22:\x22fake\x20IPv4\x22,\x22mac\x22:\x22fake\x20MAC\x20XX:XX:XX:XX:XX:XX\x22,\x22geo\x22:\x22City,\x20CC\x22,\x22isp\x22:\x22fake\x20ISP\x20name\x22,\x22userAgent\x22:\x22browser\x20string\x22,\x22os\x22:\x22OS\x20string\x22},\x22platform\x22:\x22platform\x20name\x20if\x20roblox/discord/steam/instagram/spotify/youtube/twitter/reddit/minecraft/netflix/tiktok/twitch/snapchat/github\x20detected,\x20else\x20null\x22,\x22cookies\x22:[{\x22name\x22:\x22string\x22,\x22value\x22:\x22realistic\x20fake\x20value\x22,\x22secure\x22:true,\x22httpOnly\x22:true,\x22entropy\x22:85,\x22risk\x22:\x22CRITICAL\x22,\x22expires\x22:\x22YYYY-MM-DD\x20or\x20session\x22}]}\x0aNAME\x20RULE:\x20john\x20emma\x20mike\x20sara\x20alex\x20james\x20anna\x20david\x20chris\x20jessica\x20->\x20ALWAYS\x20capitalize.\x20null\x20only\x20for\x20URLs/platforms/usernames\x20with\x20numbers/symbols.\x0aCOOKIES:\x206-7\x20entries.\x20Use\x20real\x20cookie\x20names\x20for\x20platforms:\x0aroblox->.ROBLOSECURITY,RBXSessionTracker,RBXEventTrackerV2,GuestData,RBXViralAcquisition,RBX-Device-Record\x0adiscord->__dcfduid,__sdcfduid,locale,OptionalCookies,__cfruid,__cf_bm\x0asteam->steamLoginSecure,sessionid,browserid,timezoneOffset,steamCountry,steamMachineAuth\x0ainstagram->sessionid,csrftoken,ds_user_id,ig_did,mid,rur\x0aspotify->sp_dc,sp_key,__bon,OptanonConsent,sp_landing,sp_t\x0ayoutube->CONSENT,SID,HSID,SSID,APISID,__Secure-3PSID,VISITOR_INFO1_LIVE\x0atwitter->auth_token,ct0,twid,guest_id,kdt,des_opt_in\x0areddit->reddit_session,token_v2,csv,edgebucket,loid,session_tracker\x0aminecraft->accessToken,clientToken,selectedProfile,userId,profile,token\x0atiktok->sessionid,tt_webid,tt_webid_v2,passport_csrf_token,ttwid,msToken\x0anetflix->NetflixId,SecureNetflixId,nfvdid,memclid,profilesNewSession\x0atwitch->twilight-user,unique-id,api-token,language,Server,twitch.lohp.pageContext\x0asnapchat->sc-a-session,sc-notrack,hermes_conn_mu,sc-a2-user,_ga,snap_lid\x0agithub->user_session,__Host-user_session_same_site,dotcom_user,logged_in,tz,color_mode\x0aRISK:\x20CRITICAL=auth\x20HIGH=session\x20MEDIUM=csrf\x20LOW=prefs.\x20ENTROPY:\x2092-99\x20auth\x2075-91\x20session\x2050-74\x20csrf\x2010-30\x20prefs.','csrf_token','textContent','httpOnly','\x20cookies\x20captured</span></div><div\x20class=\x22field-grid\x22><div\x20class=\x22field\x22\x20onclick=\x22copyField(\x27','\x27)\x22><div\x20class=\x22field-key\x22>IP\x20ADDRESS</div><div\x20class=\x22field-val\x20hi\x22>','25805bwBxEw','constructor','2690736EkGvwJ',')\x22\x20id=\x22crow-','text','detail-drawer','display','querySelectorAll','[*]\x20fingerprinting\x20input\x20signature...','active','3763227fsgPWp','</div></div>','[\x20SCANNING...\x20]','stat-session','3469432WYyJgv','4boNqzm','forEach','log-area'];a0_0x10dc=function(){return _0x5fed5f;};return a0_0x10dc();}function addLog(_0x2a9771,_0x3ec292){const _0xa867b6=a0_0x22dc6a,_0x3c3175=document[_0xa867b6(0xe9)]('log-area'),_0xa54894=new Date()['toISOString']()[_0xa867b6(0x157)](0xb,0x13),_0x193d44=document[_0xa867b6(0x141)]('div');_0x193d44[_0xa867b6(0x114)]=_0xa867b6(0x15c),_0x193d44['innerHTML']=_0xa867b6(0x175)+_0xa54894+_0xa867b6(0xd4)+_0x2a9771+'\x22>'+_0x3ec292+_0xa867b6(0x13c),_0x3c3175[_0xa867b6(0xe7)](_0x193d44),_0x3c3175[_0xa867b6(0x14f)]=_0x3c3175[_0xa867b6(0x12b)];}function setProgress(_0x4876c7,_0x2fab5f){const _0x1dac82=a0_0x22dc6a;document[_0x1dac82(0xe9)](_0x1dac82(0xdf))['style'][_0x1dac82(0x124)]=_0x4876c7+'%',document[_0x1dac82(0xe9)]('progress-pct')[_0x1dac82(0x184)]=_0x4876c7+'%';if(_0x2fab5f)document['getElementById'](_0x1dac82(0x153))[_0x1dac82(0x184)]=_0x2fab5f;}function riskBadge(_0x229ff9){const _0x268101=a0_0x22dc6a,_0x4afda5=_0x229ff9===_0x268101(0xe3)||_0x229ff9===_0x268101(0x113);return'<span\x20class=\x22badge\x20'+(_0x4afda5?_0x268101(0xdd):_0x268101(0x161))+'\x22>'+(_0x229ff9||_0x268101(0xfb))+_0x268101(0x13c);}function yn(_0x1d7b49){return _0x1d7b49?'<span\x20class=\x22badge\x20badge-hi\x22>YES</span>':'<span\x20class=\x22badge\x20badge-lo\x22>NO</span>';}function copyField(_0x351202){const _0x5e27c4=a0_0x22dc6a;try{navigator[_0x5e27c4(0x164)][_0x5e27c4(0xef)](_0x351202);}catch(_0x4bd6b5){}}function renderIdentity(_0x390f79,_0x3d60bc){const _0x37fdb8=a0_0x22dc6a,_0x51bac6=_0x390f79[_0x37fdb8(0x160)]||{},_0x40df60=_0x390f79[_0x37fdb8(0x122)]||null,_0xac0747=_0x51bac6[_0x37fdb8(0xed)]?_0x37fdb8(0x11b)+_0x51bac6[_0x37fdb8(0xed)]+_0x37fdb8(0x17f):_0x37fdb8(0x180),_0x448739=_0x40df60?_0x37fdb8(0x172)+_0x40df60+_0x37fdb8(0x15e)+_0x40df60[_0x37fdb8(0x13b)]()+_0x37fdb8(0x101):'';_0x3d60bc[_0x37fdb8(0x112)]='<div\x20class=\x22section-label\x22><span>IDENTITY</span><span>'+(_0x390f79[_0x37fdb8(0x129)]||[])[_0x37fdb8(0x145)]+_0x37fdb8(0x186)+(_0x51bac6[_0x37fdb8(0xed)]||'')+'\x27)\x22><div\x20class=\x22field-key\x22>NAME</div>'+_0xac0747+_0x37fdb8(0x166)+(_0x51bac6[_0x37fdb8(0x142)]||'')+_0x37fdb8(0x11e)+(_0x51bac6['email']||_0x37fdb8(0x103))+_0x37fdb8(0x168)+(_0x51bac6['userId']||'')+_0x37fdb8(0x13d)+(_0x51bac6['userId']||'—')+'</div><div\x20class=\x22copy-hint\x22>click\x20to\x20copy</div></div><div\x20class=\x22field\x22\x20onclick=\x22copyField(\x27'+(_0x51bac6[_0x37fdb8(0x125)]||'')+_0x37fdb8(0x10d)+(_0x51bac6['domain']||'—')+_0x37fdb8(0xd2)+(_0x51bac6[_0x37fdb8(0x126)]||'—')+_0x37fdb8(0x108)+(_0x51bac6['lastActive']||'—')+_0x37fdb8(0x193)+_0x448739+_0x37fdb8(0x17f);}function renderDevice(_0x2440ad,_0x4751d1){const _0xe5efa1=a0_0x22dc6a,_0x23a0f9=_0x2440ad[_0xe5efa1(0x111)]||{};_0x4751d1[_0xe5efa1(0x112)]=_0xe5efa1(0x10b)+(_0x23a0f9['ip']||'')+_0xe5efa1(0x187)+(_0x23a0f9['ip']||'—')+_0xe5efa1(0x168)+(_0x23a0f9[_0xe5efa1(0x12c)]||'')+'\x27)\x22><div\x20class=\x22field-key\x22>MAC\x20ADDRESS</div><div\x20class=\x22field-val\x20hi\x22>'+(_0x23a0f9['mac']||'—')+'</div><div\x20class=\x22copy-hint\x22>click\x20to\x20copy</div></div><div\x20class=\x22field\x22><div\x20class=\x22field-key\x22>GEO</div><div\x20class=\x22field-val\x22>'+(_0x23a0f9[_0xe5efa1(0xf0)]||'—')+_0xe5efa1(0x127)+(_0x23a0f9[_0xe5efa1(0x10a)]||'—')+_0xe5efa1(0x135)+(_0x23a0f9[_0xe5efa1(0x173)]||'—')+_0xe5efa1(0xf3)+(_0x23a0f9['os']||'—')+_0xe5efa1(0x137);}function renderCookies(_0x298639,_0x3f6a2d){const _0x221f91=a0_0x22dc6a,_0x350131=_0x298639[_0x221f91(0x129)]||[],_0x223b8c=_0x298639[_0x221f91(0x122)]||null;_0x3f6a2d[_0x221f91(0x112)]=_0x221f91(0x118)+(_0x223b8c?'\x20—\x20'+_0x223b8c[_0x221f91(0x13b)]():'')+_0x221f91(0x152)+_0x350131[_0x221f91(0x145)]+'\x20entries\x20—\x20click\x20row\x20for\x20detail</span></div><div\x20class=\x22table-wrap\x22><table\x20class=\x22cookie-table\x22><thead><tr><th>#</th><th>NAME</th><th>VALUE</th><th>SECURE</th><th>HTTP-ONLY</th><th>ENTROPY</th><th>RISK</th></tr></thead><tbody>'+_0x350131['map']((_0x1801b6,_0x49bcb6)=>_0x221f91(0x138)+_0x49bcb6+_0x221f91(0x18b)+_0x49bcb6+_0x221f91(0xe6)+String(_0x49bcb6+0x1)[_0x221f91(0xee)](0x2,'0')+_0x221f91(0x147)+_0x1801b6[_0x221f91(0xed)]+_0x221f91(0x146)+_0x1801b6[_0x221f91(0xf4)]+'\x22>'+_0x1801b6[_0x221f91(0xf4)]+_0x221f91(0x143)+yn(_0x1801b6[_0x221f91(0x136)])+_0x221f91(0x143)+yn(_0x1801b6[_0x221f91(0x185)])+_0x221f91(0xd9)+_0x1801b6['entropy']+_0x221f91(0xf9)+Math[_0x221f91(0x17b)](_0x1801b6[_0x221f91(0xfe)],0x64)+_0x221f91(0x169)+riskBadge(_0x1801b6[_0x221f91(0xec)])+_0x221f91(0x165))[_0x221f91(0xea)]('')+'</tbody></table></div>';}function selectCookie(_0x46b015){const _0x3401c7=a0_0x22dc6a;if(!lastData)return;const _0x4f0a48=(lastData[_0x3401c7(0x129)]||[])[_0x46b015];if(!_0x4f0a48)return;document['querySelectorAll']('.cookie-table\x20tr')[_0x3401c7(0xcf)](_0x4960ed=>_0x4960ed['classList'][_0x3401c7(0xd6)]('selected'));const _0x39c0b2=document[_0x3401c7(0xe9)](_0x3401c7(0x18d));if(selectedCookieIdx===_0x46b015&&_0x39c0b2[_0x3401c7(0x16a)][_0x3401c7(0x18e)]===_0x3401c7(0x151)){_0x39c0b2[_0x3401c7(0x16a)][_0x3401c7(0x18e)]=_0x3401c7(0x167),selectedCookieIdx=-0x1;return;}selectedCookieIdx=_0x46b015,document[_0x3401c7(0xe9)](_0x3401c7(0x177)+_0x46b015)?.[_0x3401c7(0xf7)][_0x3401c7(0x16b)](_0x3401c7(0x13e)),_0x39c0b2[_0x3401c7(0x16a)][_0x3401c7(0x18e)]=_0x3401c7(0x151),document[_0x3401c7(0xe9)](_0x3401c7(0x123))[_0x3401c7(0x112)]=_0x3401c7(0x116)+_0x4f0a48[_0x3401c7(0xed)]+_0x3401c7(0xe1)+_0x4f0a48['value']+'</span><span\x20class=\x22detail-key\x22>SECURE</span><span\x20class=\x22detail-val\x22>'+_0x4f0a48['secure']+'</span><span\x20class=\x22detail-key\x22>HTTP-ONLY</span><span\x20class=\x22detail-val\x22>'+_0x4f0a48[_0x3401c7(0x185)]+'</span><span\x20class=\x22detail-key\x22>ENTROPY</span><span\x20class=\x22detail-val\x22>'+_0x4f0a48[_0x3401c7(0xfe)]+_0x3401c7(0xd1)+_0x4f0a48[_0x3401c7(0xec)]+'</span><span\x20class=\x22detail-key\x22>EXPIRES</span><span\x20class=\x22detail-val\x22>'+(_0x4f0a48[_0x3401c7(0xe5)]||_0x3401c7(0x110))+_0x3401c7(0x13c);}function a0_0xbe90(_0x462ebf,_0x1952ee){_0x462ebf=_0x462ebf-0xcd;const _0x4515b3=a0_0x10dc();let _0x48db21=_0x4515b3[_0x462ebf];return _0x48db21;}function updateStatusBar(_0x16be63){const _0x1d5943=a0_0x22dc6a,_0x32c669=_0x16be63['cookies']||[],_0x428c2c=_0x32c669['find'](_0x5708a7=>_0x5708a7[_0x1d5943(0xec)]===_0x1d5943(0xe3))?_0x1d5943(0xe3):_0x32c669[_0x1d5943(0x15d)](_0x1ebca1=>_0x1ebca1[_0x1d5943(0xec)]===_0x1d5943(0x113))?_0x1d5943(0x113):'MEDIUM';document[_0x1d5943(0xe9)](_0x1d5943(0x195))[_0x1d5943(0x184)]=_0x1d5943(0x17c),document[_0x1d5943(0xe9)](_0x1d5943(0x14b))['textContent']=_0x32c669[_0x1d5943(0x145)],document['getElementById'](_0x1d5943(0xe2))[_0x1d5943(0x184)]=_0x428c2c,document[_0x1d5943(0xe9)](_0x1d5943(0x130))['textContent']='LAST\x20SCAN:\x20'+new Date()[_0x1d5943(0x181)](_0x1d5943(0x131));}function addHistory(_0x10cf7a){const _0x2147ae=a0_0x22dc6a;scanHistory[_0x2147ae(0xfc)]({'input':_0x10cf7a,'time':new Date()[_0x2147ae(0x181)](_0x2147ae(0x131))});if(scanHistory['length']>0x8)scanHistory['pop']();document[_0x2147ae(0xe9)]('history-list')[_0x2147ae(0x112)]=scanHistory['map'](_0x180a81=>_0x2147ae(0x16c)+_0x180a81[_0x2147ae(0x154)]+_0x2147ae(0x15a)+_0x180a81[_0x2147ae(0x154)]['slice'](0x0,0xe)+_0x2147ae(0x17f))[_0x2147ae(0xea)]('');}function clearAll(){const _0x23ea8c=a0_0x22dc6a;document[_0x23ea8c(0xe9)]('target-input')[_0x23ea8c(0xf4)]='',document[_0x23ea8c(0xe9)](_0x23ea8c(0xd0))[_0x23ea8c(0x112)]=_0x23ea8c(0x10f),document[_0x23ea8c(0xe9)]('results-area')[_0x23ea8c(0x112)]=_0x23ea8c(0x155),document[_0x23ea8c(0xe9)](_0x23ea8c(0x18d))[_0x23ea8c(0x16a)][_0x23ea8c(0x18e)]='none',document['getElementById'](_0x23ea8c(0xf2))[_0x23ea8c(0x16a)]['display']=_0x23ea8c(0x167),document[_0x23ea8c(0xe9)]('stat-session')[_0x23ea8c(0x184)]=_0x23ea8c(0x115),document[_0x23ea8c(0xe9)](_0x23ea8c(0x14b))[_0x23ea8c(0x184)]='0',document[_0x23ea8c(0xe9)](_0x23ea8c(0xe2))[_0x23ea8c(0x184)]='—',document['getElementById']('bottom-status')[_0x23ea8c(0x184)]=_0x23ea8c(0x115),lastData=null,selectedCookieIdx=-0x1,document[_0x23ea8c(0x18f)](_0x23ea8c(0x11a))[_0x23ea8c(0xcf)](_0x24328d=>_0x24328d[_0x23ea8c(0xf7)]['remove'](_0x23ea8c(0x191)));}function fallback(_0x3e28d5){const _0x3551f4=a0_0x22dc6a;return{'identity':{'name':null,'email':null,'userId':String(randInt(0xf4240,0x895440)),'domain':_0x3551f4(0x119),'firstLogin':'2023-06-14\x2008:32:17','lastActive':_0x3551f4(0x134)},'device':{'ip':randInt(0x1,0xfe)+'.'+randInt(0x0,0xff)+'.'+randInt(0x0,0xff)+'.'+randInt(0x1,0xfe),'mac':[...Array(0x6)][_0x3551f4(0x121)](()=>randHex(0x2))[_0x3551f4(0xea)](':'),'geo':'Helsinki,\x20FI','isp':_0x3551f4(0x170),'userAgent':'Chrome/124.0.6367','os':_0x3551f4(0xe0)},'platform':null,'cookies':[{'name':_0x3551f4(0xd7),'value':randHex(0x20),'secure':!![],'httpOnly':!![],'entropy':0x5c,'risk':_0x3551f4(0xe3),'expires':_0x3551f4(0x14e)},{'name':'auth_token','value':randHex(0x30),'secure':!![],'httpOnly':!![],'entropy':0x61,'risk':'CRITICAL','expires':'2025-12-01'},{'name':_0x3551f4(0x183),'value':randHex(0x18),'secure':!![],'httpOnly':![],'entropy':0x41,'risk':_0x3551f4(0x12d),'expires':_0x3551f4(0x110)},{'name':_0x3551f4(0x120),'value':String(randInt(0x186a0,0x895440)),'secure':![],'httpOnly':![],'entropy':0x16,'risk':_0x3551f4(0xfb),'expires':_0x3551f4(0x17d)},{'name':_0x3551f4(0xeb),'value':randHex(0x14),'secure':!![],'httpOnly':!![],'entropy':0x50,'risk':_0x3551f4(0x113),'expires':'2025-11-01'},{'name':_0x3551f4(0x11c),'value':_0x3551f4(0x11d)+randInt(0x5f5e100,0x35a4e900)+'.'+randInt(0x3b9aca00,0x218711a00),'secure':![],'httpOnly':![],'entropy':0x2a,'risk':_0x3551f4(0xfb),'expires':_0x3551f4(0xe8)}]};}async function callAI(_0x46827f){const _0x3e4a52=a0_0x22dc6a,_0x4f30f2=_0x3e4a52(0x12e)+_0x46827f+_0x3e4a52(0x182),_0x39cf31=await fetch(_0x3e4a52(0x11f),{'method':_0x3e4a52(0xfd),'headers':{'Content-Type':'application/json'},'body':JSON[_0x3e4a52(0x12a)]({'model':'claude-sonnet-4-20250514','max_tokens':0x4b0,'messages':[{'role':_0x3e4a52(0x105),'content':_0x4f30f2}]})});if(!_0x39cf31['ok'])throw new Error('HTTP\x20'+_0x39cf31[_0x3e4a52(0x159)]);const _0x4b886=await _0x39cf31[_0x3e4a52(0x117)]();if(_0x4b886['error'])throw new Error(_0x4b886[_0x3e4a52(0x16d)][_0x3e4a52(0x178)]);const _0x455c7b=_0x4b886['content'][_0x3e4a52(0x14a)](_0x565ef6=>_0x565ef6[_0x3e4a52(0x100)]===_0x3e4a52(0x18c))['map'](_0x2e29a4=>_0x2e29a4['text'])[_0x3e4a52(0xea)](''),_0x382491=_0x455c7b[_0x3e4a52(0x10c)](/^```[a-z]*\n?/,'')[_0x3e4a52(0x10c)](/\n?```$/,'')[_0x3e4a52(0x10e)](),_0x512038=JSON[_0x3e4a52(0xfa)](_0x382491);if(!_0x512038[_0x3e4a52(0x160)]||!Array['isArray'](_0x512038['cookies']))throw new Error(_0x3e4a52(0xf8));return _0x512038;}async function runVisualize(){const _0x58c999=a0_0x22dc6a,_0x4b1697=document[_0x58c999(0xe9)]('target-input')[_0x58c999(0xf4)][_0x58c999(0x10e)]();if(!_0x4b1697)return;const _0x5a8439=document[_0x58c999(0xe9)]('vizBtn'),_0x37d835=document[_0x58c999(0xe9)](_0x58c999(0xf2)),_0x1597c1=document[_0x58c999(0xe9)](_0x58c999(0x176));_0x5a8439[_0x58c999(0x107)]=!![],_0x5a8439['textContent']=_0x58c999(0x194),_0x37d835[_0x58c999(0x16a)][_0x58c999(0x18e)]=_0x58c999(0x151),setProgress(0x0,_0x58c999(0x14d)),document[_0x58c999(0xe9)]('detail-drawer')['style'][_0x58c999(0x18e)]=_0x58c999(0x167),document[_0x58c999(0xe9)](_0x58c999(0xd0))[_0x58c999(0x112)]='',_0x1597c1[_0x58c999(0x112)]='<div\x20class=\x22result-placeholder\x22>//\x20SCANNING\x20IN\x20PROGRESS...</div>';const _0x16f138=[['ok',_0x58c999(0x109)+_0x4b1697[_0x58c999(0x157)](0x0,0x1e)+_0x58c999(0x140)+document['getElementById'](_0x58c999(0x139))[_0x58c999(0xf4)]],['ok',_0x58c999(0x16f)],['ok',_0x58c999(0x190)],[_0x58c999(0xde),'[!]\x20routing\x20to\x20AI\x20parser'],['ok',_0x58c999(0x17e)],['ok',_0x58c999(0x102)],[_0x58c999(0xde),'[!]\x20high-entropy\x20token\x20detected'],[_0x58c999(0x12f),_0x58c999(0x14c)],['ok',_0x58c999(0x13a)]],_0xd3414d=callAI(_0x4b1697);for(let _0x224f4b=0x0;_0x224f4b<_0x16f138['length'];_0x224f4b++){await delay(randInt(0x64,0xd2)),addLog(_0x16f138[_0x224f4b][0x0],_0x16f138[_0x224f4b][0x1]),setProgress(Math[_0x58c999(0x171)]((_0x224f4b+0x1)/_0x16f138[_0x58c999(0x145)]*0x5a),_0x58c999(0xff));}let _0x3a4a68=null;try{_0x3a4a68=await _0xd3414d,addLog('ok',_0x58c999(0x174));}catch(_0x191559){_0x3a4a68=fallback(_0x4b1697),addLog('warn',_0x58c999(0x162));}setProgress(0x64,_0x58c999(0xf5)),await delay(0xc8),_0x37d835[_0x58c999(0x16a)][_0x58c999(0x18e)]=_0x58c999(0x167),lastData=_0x3a4a68,addHistory(_0x4b1697),updateStatusBar(_0x3a4a68),document[_0x58c999(0x18f)](_0x58c999(0x11a))[_0x58c999(0xcf)](_0x363083=>_0x363083[_0x58c999(0xf7)][_0x58c999(0x132)]('active',_0x363083[_0x58c999(0x184)][_0x58c999(0x10e)]()['toLowerCase']()===(_0x3a4a68['platform']||'')[_0x58c999(0x148)]()));if(activeTab===_0x58c999(0x129))renderCookies(_0x3a4a68,_0x1597c1);else{if(activeTab===_0x58c999(0x111))renderDevice(_0x3a4a68,_0x1597c1);else renderIdentity(_0x3a4a68,_0x1597c1);}addLog('ok',_0x58c999(0x133)+(_0x3a4a68[_0x58c999(0x129)]||[])[_0x58c999(0x145)]+_0x58c999(0x15b)),_0x5a8439[_0x58c999(0x107)]=![],_0x5a8439[_0x58c999(0x184)]=_0x58c999(0x104);}</script>
+</body>
+</html>
