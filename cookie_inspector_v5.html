@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cookie Inspector — Educational Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{width:100%;height:100%;background:#080808;overflow:hidden;}
+  :root{--fg:#e8e8e8;--fg-dim:#777;--fg-faint:#3a3a3a;--bg:#080808;--border:#1e1e1e;--border-hi:#444;--mono:'Share Tech Mono','Courier New',monospace;}
+  #app{font-family:var(--mono);background:var(--bg);color:var(--fg);display:flex;flex-direction:column;width:100%;height:100vh;}
+  .titlebar{background:#0a0a0a;border-bottom:1px solid var(--border-hi);padding:6px 14px;display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--fg-dim);letter-spacing:1px;flex-shrink:0;}
+  .titlebar-left{display:flex;align-items:center;gap:10px;}
+  .dots{display:flex;gap:5px;}
+  .dot{width:10px;height:10px;border-radius:50%;background:#333;}
+  .status-row{display:flex;gap:16px;align-items:center;}
+  .status-item{font-size:9px;color:var(--fg-faint);letter-spacing:1px;}
+  .status-item span{color:var(--fg-dim);}
+  .blink{animation:blink 1s step-end infinite;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+  .ai-tag{font-size:8px;padding:1px 5px;border:1px solid var(--border);color:var(--fg-faint);border-radius:2px;}
+  .tabs{display:flex;border-bottom:1px solid var(--border-hi);background:#0a0a0a;flex-shrink:0;}
+  .tab{padding:8px 16px;font-size:10px;letter-spacing:1px;color:var(--fg-faint);cursor:pointer;border-right:1px solid var(--border);border-bottom:2px solid transparent;transition:all 0.1s;}
+  .tab:hover{color:var(--fg-dim);background:#111;}
+  .tab.active{color:var(--fg);border-bottom:2px solid var(--fg-dim);background:#0f0f0f;}
+  .main{display:flex;flex:1;min-height:0;overflow:hidden;}
+  .sidebar{width:165px;border-right:1px solid var(--border);background:#0a0a0a;flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto;}
+  .sidebar-section{border-bottom:1px solid var(--border);padding:8px;}
+  .sidebar-label{font-size:8px;color:var(--fg-faint);letter-spacing:2px;margin-bottom:6px;}
+  .sidebar-btn{display:block;width:100%;text-align:left;background:none;border:none;color:var(--fg-dim);font-family:var(--mono);font-size:10px;padding:5px 6px;cursor:pointer;border-radius:2px;}
+  .sidebar-btn:hover{background:#161616;color:var(--fg);}
+  .sidebar-btn.active{background:#1a1a1a;color:#fff;border-left:2px solid var(--fg-dim);}
+  .content{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;}
+  .input-panel{padding:10px 14px;border-bottom:1px solid var(--border);background:#0a0a0a;flex-shrink:0;}
+  .input-label{font-size:8px;color:var(--fg-faint);letter-spacing:2px;margin-bottom:4px;}
+  .input-row{display:flex;gap:8px;align-items:center;}
+  .target-input{flex:1;background:#060606;border:1px solid var(--border-hi);border-radius:2px;color:var(--fg);font-family:var(--mono);font-size:12px;padding:7px 10px;outline:none;height:34px;min-width:0;}
+  .target-input:focus{border-color:var(--fg-dim);}
+  .target-input::placeholder{color:#2a2a2a;}
+  .btn{background:#111;border:1px solid var(--border-hi);color:var(--fg-dim);font-family:var(--mono);font-size:10px;letter-spacing:1px;padding:7px 12px;cursor:pointer;border-radius:2px;white-space:nowrap;height:34px;flex-shrink:0;}
+  .btn:hover{background:#1a1a1a;color:var(--fg);}
+  .btn:active{transform:scale(0.97);}
+  .btn:disabled{opacity:0.3;cursor:default;}
+  .btn-primary{border-color:#555;color:#ccc;}
+  .btn-primary:hover{border-color:#888;color:#fff;}
+  .options-row{display:flex;gap:10px;align-items:center;padding:5px 14px;border-bottom:1px solid var(--border);background:#090909;flex-shrink:0;flex-wrap:wrap;}
+  .opt-label{font-size:9px;color:var(--fg-faint);letter-spacing:1px;}
+  .opt-select{background:#0a0a0a;border:1px solid var(--border);color:var(--fg-dim);font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:2px;outline:none;cursor:pointer;}
+  .checkbox-wrap{display:flex;align-items:center;gap:5px;cursor:pointer;}
+  .checkbox-wrap input{accent-color:#666;cursor:pointer;}
+  .checkbox-wrap label{font-size:9px;color:var(--fg-faint);letter-spacing:1px;cursor:pointer;}
+  .log-area{padding:8px 14px;flex-shrink:0;height:120px;overflow-y:auto;border-bottom:1px solid var(--border);}
+  .log-line{font-size:10px;line-height:1.9;opacity:0;animation:fadeIn 0.05s forwards;}
+  @keyframes fadeIn{to{opacity:1}}
+  .ts{color:var(--fg-faint);}
+  .ok{color:#aaa;}.warn{color:#888;}.err{color:#ddd;font-weight:bold;}
+  .progress-wrap{padding:4px 14px;display:none;flex-shrink:0;}
+  .progress-label{font-size:8px;color:var(--fg-faint);letter-spacing:2px;margin-bottom:3px;display:flex;justify-content:space-between;}
+  .progress-bar{height:2px;background:#1a1a1a;border-radius:1px;overflow:hidden;}
+  .progress-fill{height:100%;background:var(--fg-dim);width:0%;transition:width 0.08s linear;}
+  .results-area{flex:1;overflow-y:auto;padding:12px 14px;}
+  .result-placeholder{color:var(--fg-faint);font-size:10px;padding:30px 0;text-align:center;letter-spacing:2px;}
+  .section-label{font-size:8px;color:var(--fg-faint);letter-spacing:2px;margin-bottom:7px;border-bottom:1px solid var(--border);padding-bottom:4px;display:flex;justify-content:space-between;}
+  .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:12px;}
+  .field{background:#0a0a0a;border:1px solid var(--border);border-radius:2px;padding:6px 10px;cursor:pointer;transition:border-color 0.1s;}
+  .field:hover{border-color:var(--border-hi);}
+  .field-key{font-size:8px;color:var(--fg-faint);letter-spacing:1px;margin-bottom:2px;}
+  .field-val{font-size:11px;color:var(--fg);word-break:break-all;}
+  .field-val.hi{color:#fff;}.field-val.dim{color:var(--fg-dim);}.field-val.unknown{color:var(--fg-faint);font-style:italic;}
+  .copy-hint{font-size:8px;color:var(--fg-faint);margin-top:2px;display:none;}
+  .field:hover .copy-hint{display:block;}
+  .table-wrap{overflow-x:auto;margin-bottom:10px;}
+  .cookie-table{width:100%;border-collapse:collapse;font-size:10px;}
+  .cookie-table th{color:var(--fg-faint);text-align:left;padding:4px 8px;font-size:8px;letter-spacing:1px;border-bottom:1px solid var(--border-hi);white-space:nowrap;}
+  .cookie-table td{padding:5px 8px;border-bottom:1px solid var(--border);color:var(--fg-dim);vertical-align:middle;}
+  .cookie-table tr{cursor:pointer;}
+  .cookie-table tr:hover td{background:#111;}
+  .cookie-table tr.selected td{background:#141414;color:var(--fg);}
+  .badge{display:inline-block;padding:1px 5px;border-radius:2px;font-size:8px;letter-spacing:1px;border:1px solid var(--border-hi);color:var(--fg-dim);background:#111;}
+  .badge-hi{color:#ddd;border-color:#666;background:#1a1a1a;}
+  .badge-lo{color:var(--fg-faint);border-color:#222;background:#0a0a0a;}
+  .entropy-bar{height:3px;background:#1a1a1a;border-radius:1px;margin-top:3px;width:60px;}
+  .entropy-fill{height:100%;border-radius:1px;background:var(--fg-dim);}
+  .detail-drawer{background:#0a0a0a;border-top:1px solid var(--border);padding:10px 14px;display:none;flex-shrink:0;}
+  .detail-title{font-size:8px;letter-spacing:2px;color:var(--fg-faint);margin-bottom:8px;}
+  .detail-grid{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;}
+  .detail-key{color:var(--fg-faint);font-size:9px;}
+  .detail-val{color:var(--fg);font-size:9px;word-break:break-all;}
+  .bottombar{background:#0a0a0a;border-top:1px solid var(--border);padding:4px 14px;display:flex;justify-content:space-between;align-items:center;font-size:8px;color:var(--fg-faint);letter-spacing:1px;flex-shrink:0;}
+
+  /* RADAR */
+  #radar-view{display:none;flex:1;flex-direction:column;min-height:0;background:#080808;}
+  #radar-toolbar{padding:8px 14px;border-bottom:1px solid var(--border);background:#0a0a0a;display:flex;gap:10px;align-items:center;flex-shrink:0;}
+  #radar-wrap{flex:1;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+  #radar-canvas{display:block;}
+  #radar-info{position:absolute;top:12px;right:16px;font-size:9px;color:var(--fg-faint);letter-spacing:1px;text-align:right;line-height:2;}
+  #radar-hits{position:absolute;bottom:12px;left:16px;font-size:9px;color:var(--fg-faint);letter-spacing:1px;line-height:2;max-width:260px;}
+
+  ::-webkit-scrollbar{width:4px;height:4px;}
+  ::-webkit-scrollbar-track{background:#080808;}
+  ::-webkit-scrollbar-thumb{background:#222;}
+  .prompt-line{color:var(--fg-faint);font-size:10px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="titlebar">
+    <div class="titlebar-left">
+      <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <span style="letter-spacing:2px">COOKIE_INSPECTOR</span>
+      <span class="ai-tag">CLAUDE AI</span>
+    </div>
+    <div class="status-row">
+      <div class="status-item">SESSION <span id="stat-session">IDLE</span></div>
+      <div class="status-item">COOKIES <span id="stat-cookies">0</span></div>
+      <div class="status-item">RISK <span id="stat-risk">—</span></div>
+      <div class="status-item"><span class="blink">▮</span></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('scan',this)">[ SCAN ]</div>
+    <div class="tab" onclick="switchTab('cookies',this)">[ COOKIES ]</div>
+    <div class="tab" onclick="switchTab('device',this)">[ DEVICE ]</div>
+    <div class="tab" onclick="switchTab('radar',this)">[ RADAR ]</div>
+    <div class="tab" onclick="switchTab('log',this)">[ LOG ]</div>
+  </div>
+
+  <div class="main">
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">PRESETS</div>
+        <button class="sidebar-btn" onclick="setPreset('roblox')">▸ Roblox</button>
+        <button class="sidebar-btn" onclick="setPreset('discord')">▸ Discord</button>
+        <button class="sidebar-btn" onclick="setPreset('steam')">▸ Steam</button>
+        <button class="sidebar-btn" onclick="setPreset('instagram')">▸ Instagram</button>
+        <button class="sidebar-btn" onclick="setPreset('spotify')">▸ Spotify</button>
+        <button class="sidebar-btn" onclick="setPreset('minecraft')">▸ Minecraft</button>
+        <button class="sidebar-btn" onclick="setPreset('tiktok')">▸ TikTok</button>
+        <button class="sidebar-btn" onclick="setPreset('netflix')">▸ Netflix</button>
+        <button class="sidebar-btn" onclick="setPreset('youtube')">▸ YouTube</button>
+        <button class="sidebar-btn" onclick="setPreset('twitter')">▸ Twitter/X</button>
+        <button class="sidebar-btn" onclick="setPreset('reddit')">▸ Reddit</button>
+        <button class="sidebar-btn" onclick="setPreset('twitch')">▸ Twitch</button>
+        <button class="sidebar-btn" onclick="setPreset('snapchat')">▸ Snapchat</button>
+        <button class="sidebar-btn" onclick="setPreset('github')">▸ GitHub</button>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">HISTORY</div>
+        <div id="history-list" style="font-size:9px;color:var(--fg-faint);padding:2px;">no scans yet</div>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- SCAN VIEW -->
+      <div id="scan-view" style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
+        <div class="input-panel">
+          <div class="input-label">TARGET</div>
+          <div class="input-row">
+            <input class="target-input" id="target-input" placeholder="name / platform / url / username..." onkeydown="if(event.key==='Enter')runScan()">
+            <button class="btn btn-primary" id="vizBtn" onclick="runScan()">[ SCAN ]</button>
+            <button class="btn" onclick="clearAll()">[ CLR ]</button>
+          </div>
+        </div>
+        <div class="options-row">
+          <span class="opt-label">MODE</span>
+          <select class="opt-select" id="opt-mode"><option>FULL SCAN</option><option>COOKIES ONLY</option><option>IDENTITY ONLY</option></select>
+          <span class="opt-label">DEPTH</span>
+          <select class="opt-select" id="opt-depth"><option>SHALLOW</option><option selected>DEEP</option><option>AGGRESSIVE</option></select>
+          <div class="checkbox-wrap"><input type="checkbox" id="opt-stealth" checked><label for="opt-stealth">STEALTH</label></div>
+          <div class="checkbox-wrap"><input type="checkbox" id="opt-persist"><label for="opt-persist">PERSIST</label></div>
+        </div>
+        <div class="log-area" id="log-area">
+          <div class="prompt-line">$ ready. enter target and press [ SCAN ]<span class="blink">_</span></div>
+        </div>
+        <div class="progress-wrap" id="progress-wrap">
+          <div class="progress-label"><span id="progress-label-text">SCANNING...</span><span id="progress-pct">0%</span></div>
+          <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+        </div>
+        <div class="results-area" id="results-area"><div class="result-placeholder">// NO DATA — RUN A SCAN</div></div>
+        <div class="detail-drawer" id="detail-drawer">
+          <div class="detail-title">// COOKIE DETAIL — CLICK ROW AGAIN TO CLOSE</div>
+          <div class="detail-grid" id="detail-grid"></div>
+        </div>
+      </div>
+
+      <!-- RADAR VIEW -->
+      <div id="radar-view">
+        <div id="radar-toolbar">
+          <span style="font-size:9px;color:var(--fg-faint);letter-spacing:1px;flex-shrink:0">TARGET</span>
+          <input id="radar-input" style="flex:1;background:#060606;border:1px solid var(--border-hi);color:var(--fg);font-family:var(--mono);font-size:11px;padding:5px 8px;outline:none;border-radius:2px;min-width:0;height:30px;" placeholder="ip / hostname / platform..." onkeydown="if(event.key==='Enter')radarScan()">
+          <button class="btn btn-primary" id="radar-scan-btn" onclick="radarScan()">[ SWEEP ]</button>
+          <button class="btn" onclick="radarAddRandomBlip()">[ PING ]</button>
+          <button class="btn" onclick="radarClear()">[ CLR ]</button>
+          <span style="font-size:9px;color:var(--fg-faint);letter-spacing:1px;flex-shrink:0;min-width:60px;text-align:right" id="radar-status">IDLE</span>
+        </div>
+        <div id="radar-wrap">
+          <canvas id="radar-canvas"></canvas>
+          <div id="radar-info">
+            MODE: <span id="radar-mode">PASSIVE</span><br>
+            RANGE: 500km<br>
+            FREQ: 2.4GHz<br>
+            TARGETS: <span id="radar-target-count">0</span>
+          </div>
+          <div id="radar-hits"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottombar">
+    <span>EDUCATIONAL DEMO &nbsp;|&nbsp; ALL DATA IS FAKE &nbsp;|&nbsp; cookie_inspector v5.0</span>
+    <span id="bottom-status">IDLE</span>
+  </div>
+</div>
+
+<script>
+function randHex(n){return[...Array(n)].map(()=>"0123456789abcdef"[Math.floor(Math.random()*16)]).join('');}
+function randInt(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+function delay(ms){return new Promise(r=>setTimeout(r,ms));}
+let scanHistory=[],lastData=null,activeTab='scan',selectedCookieIdx=-1;
+
+// ── TAB SWITCHING ──────────────────────────────────────────────
+function switchTab(tab,el){
+  activeTab=tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('scan-view').style.display='none';
+  document.getElementById('radar-view').style.display='none';
+  if(tab==='radar'){
+    document.getElementById('radar-view').style.display='flex';
+    resizeRadar(); return;
+  }
+  document.getElementById('scan-view').style.display='flex';
+  if(!lastData)return;
+  const ra=document.getElementById('results-area');
+  if(tab==='scan')renderIdentity(lastData,ra);
+  else if(tab==='cookies')renderCookies(lastData,ra);
+  else if(tab==='device')renderDevice(lastData,ra);
+  else if(tab==='log'){ra.innerHTML='';const c=document.getElementById('log-area').cloneNode(true);c.style.height='auto';c.style.maxHeight='none';c.style.borderBottom='none';ra.appendChild(c);}
+}
+
+function setPreset(val){
+  document.getElementById('target-input').value=val;
+  document.querySelectorAll('.sidebar-btn').forEach(b=>b.classList.toggle('active',b.textContent.trim().toLowerCase()===val));
+  document.getElementById('target-input').focus();
+}
+
+// ── LOGGING ────────────────────────────────────────────────────
+function addLog(type,msg){
+  const log=document.getElementById('log-area');
+  const ts=new Date().toISOString().slice(11,19);
+  const div=document.createElement('div');div.className='log-line';
+  div.innerHTML=`<span class="ts">${ts}</span>  <span class="${type}">${msg}</span>`;
+  log.appendChild(div);log.scrollTop=log.scrollHeight;
+}
+function setProgress(pct,label){
+  document.getElementById('progress-fill').style.width=pct+'%';
+  document.getElementById('progress-pct').textContent=pct+'%';
+  if(label)document.getElementById('progress-label-text').textContent=label;
+}
+
+// ── RENDER ─────────────────────────────────────────────────────
+function riskBadge(r){const hi=r==='CRITICAL'||r==='HIGH';return`<span class="badge ${hi?'badge-hi':'badge-lo'}">${r||'LOW'}</span>`;}
+function yn(v){return v?'<span class="badge badge-hi">YES</span>':'<span class="badge badge-lo">NO</span>';}
+function copyField(val){try{navigator.clipboard.writeText(String(val));}catch(e){}}
+
+function renderIdentity(ai,ra){
+  const id=ai.identity||{},pl=ai.platform||null;
+  const nameHtml=id.name?`<div class="field-val hi">${id.name}</div>`:`<div class="field-val unknown">unknown</div>`;
+  const platRow=pl?`<div class="field" onclick="copyField('${pl}')"><div class="field-key">PLATFORM</div><div class="field-val hi">${pl.toUpperCase()}</div><div class="copy-hint">click to copy</div></div>`:'';
+  ra.innerHTML=`<div class="section-label"><span>IDENTITY</span><span>${(ai.cookies||[]).length} cookies captured</span></div><div class="field-grid"><div class="field" onclick="copyField('${id.name||''}')"><div class="field-key">NAME</div>${nameHtml}<div class="copy-hint">click to copy</div></div><div class="field" onclick="copyField('${id.email||''}')"><div class="field-key">EMAIL</div><div class="field-val hi">${id.email||'<span class="unknown">unknown</span>'}</div><div class="copy-hint">click to copy</div></div><div class="field" onclick="copyField('${id.userId||''}')"><div class="field-key">USER ID</div><div class="field-val">#${id.userId||'—'}</div><div class="copy-hint">click to copy</div></div><div class="field" onclick="copyField('${id.domain||''}')"><div class="field-key">DOMAIN</div><div class="field-val">${id.domain||'—'}</div><div class="copy-hint">click to copy</div></div><div class="field"><div class="field-key">FIRST LOGIN</div><div class="field-val dim">${id.firstLogin||'—'}</div></div><div class="field"><div class="field-key">LAST ACTIVE</div><div class="field-val">${id.lastActive||'—'}</div></div>${platRow}</div>`;
+}
+function renderDevice(ai,ra){
+  const dev=ai.device||{};
+  ra.innerHTML=`<div class="section-label"><span>NETWORK / DEVICE</span></div><div class="field-grid"><div class="field" onclick="copyField('${dev.ip||''}')"><div class="field-key">IP ADDRESS</div><div class="field-val hi">${dev.ip||'—'}</div><div class="copy-hint">click to copy</div></div><div class="field" onclick="copyField('${dev.mac||''}')"><div class="field-key">MAC ADDRESS</div><div class="field-val hi">${dev.mac||'—'}</div><div class="copy-hint">click to copy</div></div><div class="field"><div class="field-key">GEO</div><div class="field-val">${dev.geo||'—'}</div></div><div class="field"><div class="field-key">ISP</div><div class="field-val dim">${dev.isp||'—'}</div></div><div class="field"><div class="field-key">USER-AGENT</div><div class="field-val dim" style="font-size:9px">${dev.userAgent||'—'}</div></div><div class="field"><div class="field-key">OS</div><div class="field-val dim" style="font-size:9px">${dev.os||'—'}</div></div></div>`;
+}
+function renderCookies(ai,ra){
+  const cookies=ai.cookies||[],pl=ai.platform||null;
+  ra.innerHTML=`<div class="section-label"><span>COOKIE JAR${pl?' — '+pl.toUpperCase():''}</span><span>${cookies.length} entries — click row for detail</span></div><div class="table-wrap"><table class="cookie-table"><thead><tr><th>#</th><th>NAME</th><th>VALUE</th><th>SECURE</th><th>HTTP-ONLY</th><th>ENTROPY</th><th>RISK</th></tr></thead><tbody>${cookies.map((c,i)=>`<tr onclick="selectCookie(${i})" id="crow-${i}"><td style="color:var(--fg-faint)">${String(i+1).padStart(2,'0')}</td><td style="color:#ccc;white-space:nowrap">${c.name}</td><td style="max-width:120px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis" title="${c.value}">${c.value}</td><td>${yn(c.secure)}</td><td>${yn(c.httpOnly)}</td><td><div style="font-size:9px;color:#666">${c.entropy}%</div><div class="entropy-bar"><div class="entropy-fill" style="width:${Math.min(c.entropy,100)}%"></div></div></td><td>${riskBadge(c.risk)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function selectCookie(idx){
+  if(!lastData)return;
+  const c=(lastData.cookies||[])[idx];if(!c)return;
+  document.querySelectorAll('.cookie-table tr').forEach(r=>r.classList.remove('selected'));
+  const drawer=document.getElementById('detail-drawer');
+  if(selectedCookieIdx===idx&&drawer.style.display==='block'){drawer.style.display='none';selectedCookieIdx=-1;return;}
+  selectedCookieIdx=idx;
+  document.getElementById('crow-'+idx)?.classList.add('selected');
+  drawer.style.display='block';
+  document.getElementById('detail-grid').innerHTML=`<span class="detail-key">NAME</span><span class="detail-val">${c.name}</span><span class="detail-key">VALUE</span><span class="detail-val">${c.value}</span><span class="detail-key">SECURE</span><span class="detail-val">${c.secure}</span><span class="detail-key">HTTP-ONLY</span><span class="detail-val">${c.httpOnly}</span><span class="detail-key">ENTROPY</span><span class="detail-val">${c.entropy}%</span><span class="detail-key">RISK</span><span class="detail-val">${c.risk}</span><span class="detail-key">EXPIRES</span><span class="detail-val">${c.expires||'session'}</span>`;
+}
+
+// ── RADAR ──────────────────────────────────────────────────────
+const radar = {
+  canvas: null, ctx: null,
+  cx: 0, cy: 0, r: 0,
+  angle: 0, speed: 0.018,
+  blips: [],
+  trails: [],
+  raf: null,
+  labels: ['192.168.0.','10.0.0.','172.16.0.','8.8.8.'],
+  hostnames: ['node-alpha','srv-proxy','db-main','api-gate','firewall','cdn-edge','vpn-hub','dns-01','auth-srv','cache-01']
+};
+
+function resizeRadar(){
+  const wrap = document.getElementById('radar-wrap');
+  const canvas = document.getElementById('radar-canvas');
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  if(!w || !h) { setTimeout(resizeRadar, 100); return; }
+  const size = Math.max(100, Math.min(w, h) - 40);
+  canvas.width = size; canvas.height = size;
+  radar.canvas = canvas;
+  radar.ctx = canvas.getContext('2d');
+  radar.cx = size/2; radar.cy = size/2; radar.r = Math.max(10, size/2 - 10);
+  if(!radar.raf) radarLoop();
+}
+
+function radarAddRandomBlip(){
+  const angle = Math.random()*Math.PI*2;
+  const dist = (0.15 + Math.random()*0.8) * radar.r;
+  const x = radar.cx + Math.cos(angle)*dist;
+  const y = radar.cy + Math.sin(angle)*dist;
+  const ip = radar.labels[randInt(0,3)] + randInt(1,254);
+  const host = radar.hostnames[randInt(0,radar.hostnames.length-1)];
+  radar.blips.push({x,y,age:0,maxAge:320,ip,host,size:randInt(2,4),bright:1});
+  document.getElementById('radar-target-count').textContent = radar.blips.length;
+  updateRadarHits();
+}
+
+function radarAddBlipsFromScan(data){
+  radar.blips = [];
+  const cookies = data.cookies||[];
+  const dev = data.device||{};
+  // center target = scanned host
+  radar.blips.push({x:radar.cx+randInt(-20,20),y:radar.cy+randInt(-20,20),age:0,maxAge:9999,ip:dev.ip||'0.0.0.0',host:'TARGET',size:4,bright:1,persistent:true});
+  // one blip per cookie
+  cookies.forEach((c,i)=>{
+    const angle = (i/cookies.length)*Math.PI*2;
+    const dist = (0.3+Math.random()*0.55)*radar.r;
+    const x = radar.cx + Math.cos(angle)*dist;
+    const y = radar.cy + Math.sin(angle)*dist;
+    radar.blips.push({x,y,age:0,maxAge:9999,ip:c.name,host:c.risk,size:c.risk==='CRITICAL'?5:c.risk==='HIGH'?4:3,bright:1,persistent:true});
+  });
+  // a few random noise blips
+  for(let i=0;i<4;i++) radarAddRandomBlip();
+  document.getElementById('radar-target-count').textContent=radar.blips.length;
+  updateRadarHits();
+}
+
+function updateRadarHits(){
+  const el = document.getElementById('radar-hits');
+  const show = radar.blips.filter(b=>b.persistent).slice(0,8);
+  el.innerHTML = show.map(b=>`<span style="color:#555">▸</span> ${b.ip} <span style="color:#3a3a3a">[${b.host}]</span><br>`).join('');
+}
+
+function radarClear(){
+  radar.blips = [];
+  document.getElementById('radar-target-count').textContent = '0';
+  document.getElementById('radar-hits').innerHTML = '';
+  document.getElementById('radar-status').textContent = 'IDLE';
+  document.getElementById('radar-mode').textContent = 'PASSIVE';
+  document.getElementById('radar-input').value = '';
+}
+
+async function radarScan(){
+  const input = document.getElementById('radar-input').value.trim();
+  if(!input) return;
+  const btn = document.getElementById('radar-scan-btn');
+  btn.disabled = true; btn.textContent = '[ SWEEPING... ]';
+  document.getElementById('radar-status').textContent = 'SCANNING';
+  document.getElementById('radar-mode').textContent = 'ACTIVE';
+
+  // clear old persistent blips, keep noise
+  radar.blips = radar.blips.filter(b=>!b.persistent);
+
+  // call Claude to generate fake scan data for this target
+  const prompt = `You generate fake network scan data for a fictional hacking demo radar UI. Target input: "${input}"
+Return ONLY raw JSON, no markdown.
+Schema:
+{
+  "targetIp": "fake IPv4 address",
+  "hostname": "fake hostname related to the input",
+  "openPorts": [{"port": 443, "service": "HTTPS", "risk": "LOW"}, ...],
+  "nodes": [
+    {"ip": "fake IPv4", "label": "short label max 12 chars", "dist": 0.4, "angle": 1.2, "risk": "CRITICAL|HIGH|MEDIUM|LOW"}
+  ]
+}
+Rules:
+- targetIp: fake but realistic IPv4
+- hostname: something themed to the input (e.g. "roblox" -> "auth.roblox.com", a name -> "user-srv-01", etc.)
+- openPorts: 3-5 ports with realistic service names
+- nodes: 6-10 network nodes scattered around the radar. dist is 0.15-0.9 (fraction of radar radius). angle is 0 to 6.28. label is a short IP or service name. risk is realistic.
+Make it feel like a real network scan of the target. Use realistic IPs, service names, and node labels.`;
+
+  let scanData = null;
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({model:"claude-sonnet-4-20250514", max_tokens:800, messages:[{role:"user",content:prompt}]})
+    });
+    const data = await res.json();
+    const text = data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    const clean = text.replace(/^```[a-z]*\n?/,'').replace(/\n?```$/,'').trim();
+    scanData = JSON.parse(clean);
+  } catch(e) {
+    // fallback
+    scanData = {
+      targetIp: randInt(1,254)+'.'+randInt(0,255)+'.'+randInt(0,255)+'.'+randInt(1,254),
+      hostname: input.slice(0,12)+'-srv',
+      openPorts: [{port:443,service:'HTTPS',risk:'LOW'},{port:22,service:'SSH',risk:'HIGH'},{port:8080,service:'HTTP-ALT',risk:'MEDIUM'}],
+      nodes: [...Array(7)].map((_,i)=>({ip:randInt(1,254)+'.'+randInt(0,255)+'.0.'+randInt(1,99),label:'node-'+String(i).padStart(2,'0'),dist:0.2+Math.random()*0.7,angle:(i/7)*Math.PI*2,risk:['LOW','LOW','MEDIUM','HIGH','CRITICAL'][randInt(0,4)]}))
+    };
+  }
+
+  // animate blips appearing one by one as sweep passes over them
+  // place target at center
+  radar.blips.push({
+    x: radar.cx + randInt(-15,15),
+    y: radar.cy + randInt(-15,15),
+    age:0, maxAge:9999,
+    ip: scanData.targetIp,
+    host: scanData.hostname.slice(0,16),
+    size: 5, bright: 1, persistent: true
+  });
+
+  // reveal nodes staggered
+  const nodes = scanData.nodes || [];
+  for(let i=0; i<nodes.length; i++){
+    await delay(randInt(180, 420));
+    const n = nodes[i];
+    const dist = Math.max(0.15, Math.min(0.9, n.dist||0.5)) * radar.r;
+    const angle = n.angle || (i/nodes.length)*Math.PI*2;
+    const x = radar.cx + Math.cos(angle)*dist;
+    const y = radar.cy + Math.sin(angle)*dist;
+    const size = n.risk==='CRITICAL'?5:n.risk==='HIGH'?4:n.risk==='MEDIUM'?3:2;
+    radar.blips.push({x,y,age:0,maxAge:9999,ip:n.ip||n.label,host:n.risk,size,bright:1,persistent:true});
+    document.getElementById('radar-target-count').textContent = radar.blips.length;
+    updateRadarHits();
+  }
+
+  // update info panel with port list
+  const portStr = (scanData.openPorts||[]).map(p=>`${p.port}/${p.service}`).join(' · ');
+  document.getElementById('radar-hits').innerHTML =
+    `<span style="color:#555">TARGET</span> ${scanData.targetIp} [${scanData.hostname}]<br>` +
+    `<span style="color:#3a3a3a">PORTS &nbsp;</span><span style="color:#444">${portStr}</span><br><br>` +
+    radar.blips.filter(b=>b.persistent).slice(1,9).map(b=>`<span style="color:#444">▸</span> ${b.ip} <span style="color:#3a3a3a">[${b.host}]</span><br>`).join('');
+
+  document.getElementById('radar-status').textContent = 'LOCKED';
+  document.getElementById('radar-mode').textContent = 'ACTIVE';
+  btn.disabled = false; btn.textContent = '[ SWEEP ]';
+}
+
+function radarLoop(){
+  const {ctx,cx,cy,r,canvas} = radar;
+  if(!ctx||!r||r<=0){radar.raf=requestAnimationFrame(radarLoop);return;}
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // background
+  ctx.fillStyle='#080808';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // grid rings
+  for(let i=1;i<=4;i++){
+    ctx.beginPath();
+    ctx.arc(cx,cy,(r/4)*i,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(80,80,80,${i===4?0.5:0.2})`;
+    ctx.lineWidth=1;
+    ctx.stroke();
+    // ring label
+    ctx.fillStyle='rgba(60,60,60,0.9)';
+    ctx.font='9px Share Tech Mono, monospace';
+    ctx.fillText(`${i*125}km`,cx+4,cy-(r/4)*i+3);
+  }
+
+  // crosshairs
+  ctx.strokeStyle='rgba(60,60,60,0.3)';
+  ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(cx,cy-r); ctx.lineTo(cx,cy+r); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx-r,cy); ctx.lineTo(cx+r,cy); ctx.stroke();
+  // diagonal crosshairs
+  ctx.strokeStyle='rgba(40,40,40,0.2)';
+  ctx.beginPath(); ctx.moveTo(cx-r*0.707,cy-r*0.707); ctx.lineTo(cx+r*0.707,cy+r*0.707); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx+r*0.707,cy-r*0.707); ctx.lineTo(cx-r*0.707,cy+r*0.707); ctx.stroke();
+
+  // sweep trail (fade arc)
+  for(let t=0;t<60;t++){
+    const trailAngle = radar.angle - (t/60)*(Math.PI*0.7);
+    const alpha = (1-(t/60))*0.18;
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,trailAngle,trailAngle+0.05);
+    ctx.closePath();
+    ctx.fillStyle=`rgba(200,200,200,${alpha})`;
+    ctx.fill();
+  }
+
+  // sweep line
+  ctx.beginPath();
+  ctx.moveTo(cx,cy);
+  ctx.lineTo(cx+Math.cos(radar.angle)*r, cy+Math.sin(radar.angle)*r);
+  ctx.strokeStyle='rgba(220,220,220,0.8)';
+  ctx.lineWidth=1.5;
+  ctx.stroke();
+
+  // outer border circle
+  ctx.beginPath();
+  ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.strokeStyle='rgba(100,100,100,0.6)';
+  ctx.lineWidth=1.5;
+  ctx.stroke();
+
+  // compass labels
+  ctx.fillStyle='rgba(80,80,80,0.8)';
+  ctx.font='9px Share Tech Mono, monospace';
+  ctx.textAlign='center';
+  ctx.fillText('N',cx,cy-r-6);
+  ctx.fillText('S',cx,cy+r+14);
+  ctx.textAlign='right';
+  ctx.fillText('W',cx-r-4,cy+4);
+  ctx.textAlign='left';
+  ctx.fillText('E',cx+r+4,cy+4);
+  ctx.textAlign='left';
+
+  // blips
+  radar.blips = radar.blips.filter(b=>b.persistent||(b.age<b.maxAge));
+  radar.blips.forEach(b=>{
+    if(!b.persistent) b.age++;
+    // check if sweep just passed over this blip — light it up
+    const bAngle = Math.atan2(b.y-cy, b.x-cx);
+    const diff = ((radar.angle - bAngle) % (Math.PI*2) + Math.PI*2) % (Math.PI*2);
+    if(diff < 0.12) b.bright = 1.0;
+    else b.bright = Math.max(0.08, b.bright*0.985);
+
+    const alpha = b.persistent ? b.bright : b.bright*(1-(b.age/b.maxAge));
+    if(alpha < 0.01) return;
+
+    // glow
+    const grd = ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,b.size*4);
+    grd.addColorStop(0,`rgba(255,255,255,${alpha*0.6})`);
+    grd.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=grd;
+    ctx.beginPath();
+    ctx.arc(b.x,b.y,b.size*4,0,Math.PI*2);
+    ctx.fill();
+
+    // dot
+    ctx.fillStyle=`rgba(255,255,255,${Math.min(1,alpha+0.2)})`;
+    ctx.beginPath();
+    ctx.arc(b.x,b.y,b.size,0,Math.PI*2);
+    ctx.fill();
+
+    // label on bright
+    if(b.bright > 0.5 && b.ip){
+      ctx.fillStyle=`rgba(180,180,180,${b.bright*0.9})`;
+      ctx.font='8px Share Tech Mono, monospace';
+      ctx.fillText(b.ip.slice(0,16),b.x+b.size+4,b.y+3);
+    }
+  });
+
+  // center dot
+  ctx.fillStyle='rgba(200,200,200,0.9)';
+  ctx.beginPath(); ctx.arc(cx,cy,3,0,Math.PI*2); ctx.fill();
+
+  // advance sweep
+  radar.angle = (radar.angle + radar.speed) % (Math.PI*2);
+
+  // occasionally add noise blip
+  if(Math.random()<0.003) radarAddRandomBlip();
+
+  radar.raf = requestAnimationFrame(radarLoop);
+}
+
+window.addEventListener('resize',()=>{ if(activeTab==='radar') resizeRadar(); });
+// start radar loop passively after short delay
+setTimeout(()=>{resizeRadar();},500);
+
+// ── STATUS ─────────────────────────────────────────────────────
+function updateStatusBar(data){
+  const cookies=data.cookies||[];
+  const maxRisk=cookies.find(c=>c.risk==='CRITICAL')?'CRITICAL':cookies.find(c=>c.risk==='HIGH')?'HIGH':'MEDIUM';
+  document.getElementById('stat-session').textContent='ACTIVE';
+  document.getElementById('stat-cookies').textContent=cookies.length;
+  document.getElementById('stat-risk').textContent=maxRisk;
+  document.getElementById('bottom-status').textContent='LAST SCAN: '+new Date().toLocaleTimeString('en-GB');
+}
+function addHistory(input){
+  scanHistory.unshift({input});if(scanHistory.length>8)scanHistory.pop();
+  document.getElementById('history-list').innerHTML=scanHistory.map(h=>`<div style="padding:3px 2px;cursor:pointer;color:var(--fg-faint);font-size:9px" onclick="setPreset('${h.input}')">▸ ${h.input.slice(0,14)}</div>`).join('');
+}
+function clearAll(){
+  document.getElementById('target-input').value='';
+  document.getElementById('log-area').innerHTML='<div class="prompt-line">$ cleared.<span class="blink">_</span></div>';
+  document.getElementById('results-area').innerHTML='<div class="result-placeholder">// NO DATA — RUN A SCAN</div>';
+  document.getElementById('detail-drawer').style.display='none';
+  document.getElementById('progress-wrap').style.display='none';
+  document.getElementById('stat-session').textContent='IDLE';
+  document.getElementById('stat-cookies').textContent='0';
+  document.getElementById('stat-risk').textContent='—';
+  document.getElementById('bottom-status').textContent='IDLE';
+  lastData=null;selectedCookieIdx=-1;
+  document.querySelectorAll('.sidebar-btn').forEach(b=>b.classList.remove('active'));
+}
+
+// ── FALLBACK ───────────────────────────────────────────────────
+function fallback(){
+  return{identity:{name:null,email:null,userId:String(randInt(1e6,9e6)),domain:'unknown.com',firstLogin:'2023-06-14 08:32:17',lastActive:'2025-04-28 19:11:44'},device:{ip:randInt(1,254)+'.'+randInt(0,255)+'.'+randInt(0,255)+'.'+randInt(1,254),mac:[...Array(6)].map(()=>randHex(2)).join(':'),geo:'Helsinki, FI',isp:'Telia Finland Oyj',userAgent:'Chrome/124.0.6367',os:'Windows NT 10.0; Win64; x64'},platform:null,cookies:[{name:'session_id',value:randHex(32),secure:true,httpOnly:true,entropy:92,risk:'CRITICAL',expires:'2025-12-01'},{name:'auth_token',value:randHex(48),secure:true,httpOnly:true,entropy:97,risk:'CRITICAL',expires:'2025-12-01'},{name:'csrf_token',value:randHex(24),secure:true,httpOnly:false,entropy:65,risk:'MEDIUM',expires:'session'},{name:'user_id',value:String(randInt(1e5,9e6)),secure:false,httpOnly:false,entropy:22,risk:'LOW',expires:'2026-01-01'},{name:'remember_me',value:randHex(20),secure:true,httpOnly:true,entropy:80,risk:'HIGH',expires:'2025-11-01'},{name:'_ga',value:'GA1.2.'+randInt(1e8,9e8)+'.'+randInt(1e9,9e9),secure:false,httpOnly:false,entropy:42,risk:'LOW',expires:'2027-01-01'}]};
+}
+
+// ── CLAUDE AI ──────────────────────────────────────────────────
+async function callAI(input){
+  const prompt=`You parse input for a fictional hacking demo UI. Input: "${input}"\nReturn ONLY raw JSON, no markdown, no explanation.\nSchema:\n{"identity":{"name":"capitalized if person name (john->John, single first names ALWAYS count), null otherwise","email":"fabricated realistic email or null","userId":"fake 7-digit numeric string","domain":"real domain for platforms else gmail.com","firstLogin":"YYYY-MM-DD HH:MM:SS","lastActive":"YYYY-MM-DD HH:MM:SS"},"device":{"ip":"fake realistic IPv4","mac":"fake MAC XX:XX:XX:XX:XX:XX","geo":"City, CC","isp":"fake ISP name","userAgent":"realistic browser UA","os":"realistic OS string"},"platform":"detected platform name or null","cookies":[{"name":"string","value":"realistic fake value","secure":true,"httpOnly":true,"entropy":85,"risk":"CRITICAL","expires":"YYYY-MM-DD or session"}]}\nNAME: single first names like john emma mike sara alex -> ALWAYS capitalize. null only for URLs/platforms/usernames with numbers.\nPLATFORM: detect roblox discord steam instagram spotify youtube twitter reddit minecraft netflix tiktok twitch snapchat github.\nCOOKIES 6-7 with real platform names:\nroblox->.ROBLOSECURITY,RBXSessionTracker,RBXEventTrackerV2,GuestData,RBXViralAcquisition,RBX-Device-Record\ndiscord->__dcfduid,__sdcfduid,locale,OptionalCookies,__cfruid,__cf_bm\nsteam->steamLoginSecure,sessionid,browserid,timezoneOffset,steamCountry,steamMachineAuth\ninstagram->sessionid,csrftoken,ds_user_id,ig_did,mid,rur\nspotify->sp_dc,sp_key,__bon,OptanonConsent,sp_landing,sp_t\nyoutube->CONSENT,SID,HSID,SSID,APISID,__Secure-3PSID,VISITOR_INFO1_LIVE\ntwitter->auth_token,ct0,twid,guest_id,kdt,des_opt_in\nreddit->reddit_session,token_v2,csv,edgebucket,loid,session_tracker\nminecraft->accessToken,clientToken,selectedProfile,userId,profile,token\ntiktok->sessionid,tt_webid,tt_webid_v2,passport_csrf_token,ttwid,msToken\nnetflix->NetflixId,SecureNetflixId,nfvdid,memclid,profilesNewSession\ntwitch->twilight-user,unique-id,api-token,language,Server,twitch.lohp.pageContext\nsnapchat->sc-a-session,sc-notrack,hermes_conn_mu,sc-a2-user,_ga,snap_lid\ngithub->user_session,__Host-user_session_same_site,dotcom_user,logged_in,tz,color_mode\nRISK: CRITICAL=auth HIGH=session MEDIUM=csrf LOW=prefs. ENTROPY: 92-99 auth 75-91 session 50-74 csrf 10-30 prefs.`;
+  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1200,messages:[{role:"user",content:prompt}]})});
+  if(!res.ok)throw new Error('HTTP '+res.status);
+  const data=await res.json();
+  if(data.error)throw new Error(data.error.message);
+  const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+  const clean=text.replace(/^```[a-z]*\n?/,'').replace(/\n?```$/,'').trim();
+  const parsed=JSON.parse(clean);
+  if(!parsed.identity||!Array.isArray(parsed.cookies))throw new Error('bad schema');
+  return parsed;
+}
+
+// ── MAIN SCAN ──────────────────────────────────────────────────
+async function runScan(){
+  const input=document.getElementById('target-input').value.trim();if(!input)return;
+  const btn=document.getElementById('vizBtn'),pw=document.getElementById('progress-wrap'),ra=document.getElementById('results-area');
+  btn.disabled=true;btn.textContent='[ SCANNING... ]';
+  pw.style.display='block';setProgress(0,'INITIALIZING');
+  document.getElementById('detail-drawer').style.display='none';
+  document.getElementById('log-area').innerHTML='';
+  ra.innerHTML='<div class="result-placeholder">// SCANNING IN PROGRESS...</div>';
+  const logs=[['ok',`$ ./scan --target "${input.slice(0,30)}" --mode ${document.getElementById('opt-mode').value}`],['ok','[*] Claude inference engine online'],['ok','[*] fingerprinting input signature...'],['warn','[!] routing to AI parser'],['ok','[*] resolving platform context'],['ok','[*] generating session artifacts'],['warn','[!] high-entropy token detected'],['err','[!!!] auth cookie exposed — capturing'],['ok','[+] mapping fields to output table...']];
+  const aiPromise=callAI(input);
+  for(let i=0;i<logs.length;i++){await delay(randInt(100,210));addLog(logs[i][0],logs[i][1]);setProgress(Math.round(((i+1)/logs.length)*90),'SCANNING');}
+  let ai=null;
+  try{ai=await aiPromise;addLog('ok','[+] AI parse OK — writing to table');}
+  catch(e){ai=fallback();addLog('warn','[!] AI error — fallback loaded');}
+  setProgress(100,'COMPLETE');await delay(180);pw.style.display='none';
+  lastData=ai;addHistory(input);updateStatusBar(ai);
+  document.querySelectorAll('.sidebar-btn').forEach(b=>b.classList.toggle('active',b.textContent.trim().toLowerCase()===(ai.platform||'').toLowerCase()));
+  // populate radar with scan data
+  radarAddBlipsFromScan(ai);
+  if(activeTab==='cookies')renderCookies(ai,ra);
+  else if(activeTab==='device')renderDevice(ai,ra);
+  else renderIdentity(ai,ra);
+  addLog('ok',`[+] done — ${(ai.cookies||[]).length} cookies written to table`);
+  btn.disabled=false;btn.textContent='[ SCAN ]';
+}
+</script>
+</body>
+</html>
